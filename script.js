@@ -22,6 +22,33 @@ const FG_ATOMS = {
   "Nitrile": { elem: "N" }
 };
 
+// ── SAFE LOCALSTORAGE HELPER ──────────────────────────────────────
+const safeStorage = {
+  getItem(key, defaultValue = null) {
+    try {
+      const val = localStorage.getItem(key);
+      return val !== null ? val : defaultValue;
+    } catch (e) {
+      console.warn(`localStorage read failed for key "${key}":`, e);
+      return defaultValue;
+    }
+  },
+  setItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn(`localStorage write failed for key "${key}":`, e);
+    }
+  },
+  removeItem(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn(`localStorage delete failed for key "${key}":`, e);
+    }
+  }
+};
+
 // ── GLOBAL STATE ─────────────────────────────────────────────────
 let molecules = [];
 let searchQuery = "";
@@ -33,10 +60,19 @@ let glViewer = null;
 let isSpinning = false;
 let currentStyle = "ballstick";
 
-let starredIds = new Set(JSON.parse(localStorage.getItem("starred_ids") || "[]"));
+let starredIds = new Set();
+try {
+  const savedStarred = safeStorage.getItem("starred_ids");
+  if (savedStarred) {
+    starredIds = new Set(JSON.parse(savedStarred));
+  }
+} catch (e) {
+  console.warn("Failed to load/parse starred_ids:", e);
+}
+
 let quizMode = false;
-let quizGot = parseInt(localStorage.getItem("quiz_got") || "0");
-let quizMiss = parseInt(localStorage.getItem("quiz_miss") || "0");
+let quizGot = parseInt(safeStorage.getItem("quiz_got", "0"));
+let quizMiss = parseInt(safeStorage.getItem("quiz_miss", "0"));
 let activeFgBadge = null;
 
 // ── DOM ELEMENTS ─────────────────────────────────────────────────
@@ -92,17 +128,33 @@ async function init() {
   updateStats();
   renderMolecules();
   setupEventListeners();
+  check3DmolAvailability();
 
   console.log(`Loaded ${molecules.length} molecules. Application ready.`);
 }
 
 // ── THEME MANAGEMENT ────────────────────────────────────────────
 function setupTheme() {
-  const savedTheme = localStorage.getItem("theme") || "dark";
+  const savedTheme = safeStorage.getItem("theme") || "dark";
   if (savedTheme === "dark") {
     document.documentElement.classList.add("dark-theme");
   } else {
     document.documentElement.classList.remove("dark-theme");
+  }
+}
+
+function check3DmolAvailability() {
+  if (typeof $3Dmol === "undefined") {
+    console.warn("3Dmol library is not available. 3D view disabled.");
+    const selectViewMode = document.getElementById("selectViewMode");
+    if (selectViewMode) {
+      const option3d = selectViewMode.querySelector('option[value="3d"]');
+      if (option3d) {
+        option3d.disabled = true;
+        option3d.textContent = "3D View (Offline - Unavailable)";
+      }
+      selectViewMode.value = "skeletal";
+    }
   }
 }
 
@@ -432,7 +484,7 @@ function selectMolecule(index) {
   if (currentMode === "boat" && !mol.boat_svg) isAvailable = false;
 
   if (!isAvailable) {
-    selectViewMode.value = "3d";
+    selectViewMode.value = typeof $3Dmol !== "undefined" ? "3d" : "skeletal";
   }
 
   updateMoleculeRepresentation();
@@ -538,7 +590,21 @@ function updateMoleculeRepresentation() {
       glViewer.render();
       glViewer.spin(isSpinning);
     } else {
-      showFallbackImage(mol);
+      if (typeof $3Dmol === "undefined") {
+        console.warn("3Dmol is not defined. Falling back to 2D skeletal representation.");
+        const selectViewMode = document.getElementById("selectViewMode");
+        if (selectViewMode) {
+          selectViewMode.value = "skeletal";
+          const option3d = selectViewMode.querySelector('option[value="3d"]');
+          if (option3d) {
+            option3d.disabled = true;
+            option3d.textContent = "3D View (Offline - Unavailable)";
+          }
+        }
+        updateMoleculeRepresentation();
+      } else {
+        showFallbackImage(mol);
+      }
     }
   } else {
     viewer3d.style.display = "none";
@@ -748,7 +814,7 @@ function toggleStar(molId, btn) {
     btn.classList.add("starred");
     btn.textContent = "★";
   }
-  localStorage.setItem("starred_ids", JSON.stringify([...starredIds]));
+  safeStorage.setItem("starred_ids", JSON.stringify([...starredIds]));
   if (document.getElementById("btnStarredFilter").classList.contains("active")) {
     renderMolecules();
   }
@@ -768,10 +834,10 @@ function toggleQuiz() {
 function quizAnswer(gotIt, card) {
   if (gotIt) {
     quizGot++;
-    localStorage.setItem("quiz_got", quizGot);
+    safeStorage.setItem("quiz_got", quizGot);
   } else {
     quizMiss++;
-    localStorage.setItem("quiz_miss", quizMiss);
+    safeStorage.setItem("quiz_miss", quizMiss);
   }
   if (card) card.classList.add("quiz-revealed");
   updateQuizScore();
@@ -786,8 +852,8 @@ function updateQuizScore() {
 
 function resetQuizScore() {
   quizGot = quizMiss = 0;
-  localStorage.removeItem("quiz_got");
-  localStorage.removeItem("quiz_miss");
+  safeStorage.removeItem("quiz_got");
+  safeStorage.removeItem("quiz_miss");
   updateQuizScore();
 }
 
@@ -907,7 +973,7 @@ function setupEventListeners() {
   // Theme toggle
   themeToggleBtn.addEventListener("click", () => {
     const isDark = document.documentElement.classList.toggle("dark-theme");
-    localStorage.setItem("theme", isDark ? "dark" : "light");
+    safeStorage.setItem("theme", isDark ? "dark" : "light");
     if (glViewer) {
       glViewer.setBackgroundColor(isDark ? "#111827" : "#f9fafb");
       glViewer.render();

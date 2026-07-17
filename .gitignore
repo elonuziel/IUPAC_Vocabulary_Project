@@ -23,7 +23,7 @@ wheels/
 *.egg
 
 # Build outputs
-IUPAC_Offline.html
+IUPAC_Offline*.html
 IUPAC_Chemistry_Offline.zip
 IUPAC_Chemistry_Modular.zip
 

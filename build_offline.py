@@ -54,6 +54,7 @@ def create_offline_html():
     updateStats();
     renderMolecules();
     setupEventListeners();
+    check3DmolAvailability();
     console.log(`Loaded ${molecules.length} molecules offline`);
 }
 """
