@@ -1,0 +1,162 @@
+name: Build Offline Version & Deploy to Pages
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'index.html'
+      - 'styles.css'
+      - 'script.js'
+      - 'molecules.json'
+      - 'build_offline.py'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:  # Allow manual triggering
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly build
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-offline:
+    name: Build Offline Version
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 🔨 Build offline version
+      run: |
+        echo "Building offline IUPAC Chemistry App..."
+        python build_offline.py
+        ls -lh IUPAC_*.* || true
+    
+    - name: 📦 Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: IUPAC_Chemistry_Offline
+        path: |
+          IUPAC_Offline.html
+          IUPAC_Chemistry_Offline.zip
+          IUPAC_Chemistry_Modular.zip
+        retention-days: 90
+        if-no-files-found: warn
+    
+    - name: 📊 Show build summary
+      run: |
+        echo "=== Build Summary ==="
+        echo "Files created:"
+        ls -lh IUPAC_*.* 2>/dev/null || echo "No files found"
+        echo "Total size:"
+        du -sh . | head -1
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: build-offline
+    runs-on: ubuntu-latest
+    if: always()
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Pages
+      uses: actions/configure-pages@v4
+    
+    - name: 🏗️  Build site
+      uses: actions/jekyll-build-pages@v1
+      with:
+        source: ./
+        destination: ./_site
+    
+    - name: 📤 Upload artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: './_site'
+    
+    - name: 🚀 Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+      continue-on-error: true
+    
+    - name: ✅ Deployment complete
+      run: |
+        echo "GitHub Pages deployment complete!"
+        echo "Visit: ${{ steps.deployment.outputs.page_url }}"
+
+  create-release:
+    name: Create Release (on Tag)
+    needs: build-offline
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 🔨 Build offline version
+      run: python build_offline.py
+    
+    - name: 📝 Get tag name
+      id: tag
+      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: 🎯 Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: "IUPAC Chemistry App - ${{ steps.tag.outputs.TAG_NAME }}"
+        body: |
+          ## 🧪 IUPAC Chemistry Vocabulary Companion
+          
+          Download the offline version to use anywhere, anytime - no internet needed!
+          
+          ### 📥 Choose Your Format:
+          
+          - **IUPAC_Offline.html** - Single file, just open in browser
+          - **IUPAC_Chemistry_Offline.zip** - Standalone package with guide
+          - **IUPAC_Chemistry_Modular.zip** - Source files for customization
+          
+          ### ✨ Features:
+          - 184 molecules with IUPAC nomenclature
+          - 3D interactive molecular viewer
+          - Multiple 2D projection types
+          - Quiz mode with scoring
+          - Dark/Light theme
+          - Works completely offline
+          - No internet required
+          
+          ### 🚀 Quick Start:
+          1. Download one of the files above
+          2. Open the HTML file in your web browser
+          3. Start learning!
+          
+          [📖 Full Documentation](https://github.com/elonuziel/IUPAC_Vocabulary_Project#readme)
+        files: |
+          IUPAC_Offline.html
+          IUPAC_Chemistry_Offline.zip
+          IUPAC_Chemistry_Modular.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

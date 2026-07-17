@@ -1,0 +1,45 @@
+# GitHub Pages Jekyll Configuration
+# This configures how GitHub Pages builds and serves the site
+
+# Site settings
+title: "IUPAC Chemistry Vocabulary Companion"
+description: "Interactive exam companion for organic chemistry - 184 molecules with 3D visualization"
+url: "https://elonuziel.github.io/IUPAC_Vocabulary_Project"
+baseurl: "/IUPAC_Vocabulary_Project"
+
+# Build settings
+markdown: kramdown
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Exclude files from build
+exclude:
+  - .gitignore
+  - .git
+  - IUPAC_Searchable_Vocabulary.html
+  - IUPAC_Searchable_Vocabulary.html.bkp
+  - "*.py"
+  - structures/
+  - .github/
+
+# Include hidden files if needed
+include:
+  - .gitignore
+
+# Limit posts if using blog
+paginate: 10
+
+# Keep build files
+keep_files:
+  - index.html
+  - styles.css
+  - script.js
+  - molecules.json
+
+# Encoding
+encoding: "utf-8"
+
+# Analytics (optional - commented out for privacy)
+# google_analytics: YOUR_ANALYTICS_ID
