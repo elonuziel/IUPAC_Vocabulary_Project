@@ -106,7 +106,7 @@ jobs:
     name: Create Semantic Patch Release
     needs: build-offline
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref_type == 'branch'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
     
     steps:
     - name: 📥 Checkout code
