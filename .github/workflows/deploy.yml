@@ -46,7 +46,7 @@ jobs:
         ls -lh IUPAC_*.* || true
     
     - name: 📦 Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: IUPAC_Chemistry_Offline
         path: |
@@ -88,13 +88,13 @@ jobs:
         destination: ./_site
     
     - name: 📤 Upload artifact
-      uses: actions/upload-pages-artifact@v2
+      uses: actions/upload-pages-artifact@v3
       with:
         path: './_site'
     
     - name: 🚀 Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v2
+      uses: actions/deploy-pages@v4
       continue-on-error: true
     
     - name: ✅ Deployment complete
