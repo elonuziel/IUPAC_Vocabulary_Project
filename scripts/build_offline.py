@@ -44,6 +44,26 @@ def create_offline_html():
     
     print(f"  ✓ Loaded {len(molecules)} molecules")
     
+    # Replace the source startup handler so the standalone page never fetches
+    # molecules.json from the local filesystem.
+    offline_startup = """async function initOffline() {
+    console.log('Offline mode: Using embedded molecules data');
+    molecules = EMBEDDED_MOLECULES;
+    setupTheme();
+    setupFilters();
+    updateStats();
+    renderMolecules();
+    setupEventListeners();
+    console.log(`Loaded ${molecules.length} molecules offline`);
+}
+"""
+    offline_js_source = re.sub(
+        r'document\.addEventListener\(["\']DOMContentLoaded["\'],\s*init\s*\);',
+        'document.addEventListener("DOMContentLoaded", initOffline);',
+        js_content,
+        count=1
+    )
+
     # Create a modified script that uses embedded data
     offline_js = f"""
 // ═══════════════════════════════════════════════════════════════
@@ -52,22 +72,8 @@ def create_offline_html():
 const OFFLINE_MODE = true;
 const EMBEDDED_MOLECULES = {json.dumps(molecules, ensure_ascii=False, separators=(',', ':'))};
 
-{js_content}
-
-// Override init to use embedded data
-(function() {{
-  const originalInit = window.init || (async () => {{}});
-  window.init = async function() {{
-    console.log('🔌 Offline mode: Using embedded molecules data');
-    molecules = EMBEDDED_MOLECULES;
-    setupTheme();
-    setupFilters();
-    updateStats();
-    renderMolecules();
-    setupEventListeners();
-    console.log(`✅ Loaded ${{molecules.length}} molecules offline`);
-  }};
-}})();
+{offline_startup}
+{offline_js_source}
 """
     
     # Extract head content
