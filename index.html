@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organic Chemistry IUPAC Exam Companion</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- 3Dmol.js for 3D Molecule Rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.1.0/3Dmol-min.js"></script>
+  
+  <!-- External Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Confetti Canvas for Celebration Effects -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Quiz Toolbar -->
+  <div class="quiz-toolbar hidden" id="quizToolbar">
+    <span style="color:var(--text-secondary);font-family:var(--font-outfit);font-weight:600;">🎓 Quiz Mode</span>
+    <button class="btn-quiz-toggle active" id="btnQuit Quiz">Exit Quiz</button>
+    <div class="quiz-score">
+      <span>✓ <span class="score-got" id="scoreGot">0</span></span>
+      <span>✗ <span class="score-miss" id="scoreMiss">0</span></span>
+      <button id="btnResetQuiz" style="background:none;border:1px solid var(--card-border);border-radius:6px;padding:2px 8px;color:var(--text-muted);cursor:pointer;font-size:0.75rem;">Reset</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="header-top-row">
+        <div class="logo-area">
+          <svg class="logo-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
+          <h1>IUPAC Answer Key</h1>
+        </div>
+        <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Dark/Light Mode">
+          <svg class="sun-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4-9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+          </svg>
+          <svg class="moon-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+      <div class="subtitle">Searchable reference list for organic chemistry exams</div>
+      <div class="hebrew-hint">חיפוש והעתקה מהירה של שמות IUPAC למבחן בכימיה אורגנית</div>
+    </header>
+
+    <!-- Stats Dashboard -->
+    <section class="stats-row">
+      <div class="stat-card">
+        <span class="stat-val" id="stat-total">0</span>
+        <span class="stat-label">Total Names</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="stat-stereo">0</span>
+        <span class="stat-label">Stereo</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="stat-halo">0</span>
+        <span class="stat-label">Haloalkanes</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="stat-unsaturated">0</span>
+        <span class="stat-label">Alkenes/Alkynes</span>
+      </div>
+    </section>
+
+    <!-- Sticky Search Area -->
+    <section class="search-area">
+      <div class="search-bar-wrapper">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z" />
+        </svg>
+        <input 
+          type="text" 
+          class="search-input" 
+          id="searchInput" 
+          placeholder="Type to search (e.g. hexene, dimethyl, (E)...)" 
+          autocomplete="off" 
+          spellcheck="false" 
+          autofocus
+        >
+        <button class="clear-btn" id="clearBtn">
+          <svg style="width:1.1rem; height:1.1rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <span class="shortcut-badge" id="shortcutBadge">/</span>
+      </div>
+
+      <!-- Filter Tags -->
+      <div class="filters-wrapper" id="filtersContainer">
+        <button class="filter-btn starred-filter" id="btnStarredFilter" title="Show starred only">⭐ Starred</button>
+        <button class="filter-btn" id="btnQuizMode" title="Enter Quiz Mode">🎓 Quiz</button>
+        <button class="filter-btn active" data-category="all">
+          <span>All</span>
+          <span class="filter-count" id="count-all">0</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Layout: Molecules List + Detail Sidebar -->
+    <div class="main-layout-wrapper">
+      <!-- Molecules Results List -->
+      <main class="molecules-list" id="moleculesList">
+        <!-- Rendered dynamically by JavaScript -->
+      </main>
+
+      <!-- 3D & Detail Sidebar -->
+      <aside class="detail-sidebar" id="detailSidebar">
+        <button class="sidebar-close-btn" id="btnSidebarClose" title="Close details">&times;</button>
+
+        <!-- Default Welcome State -->
+        <div class="sidebar-welcome" id="sidebarWelcome">
+          <div class="welcome-molecule-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="3" />
+              <circle cx="6" cy="6" r="2" />
+              <circle cx="18" cy="18" r="2" />
+              <circle cx="6" cy="18" r="2" />
+              <circle cx="18" cy="6" r="2" />
+              <line x1="8" y1="8" x2="10" y2="10" />
+              <line x1="16" y1="16" x2="14" y2="14" />
+              <line x1="8" y1="16" x2="10" y2="14" />
+              <line x1="16" y1="8" x2="14" y2="10" />
+            </svg>
+          </div>
+          <h3>Select a Molecule</h3>
+          <p>Click on any compound card or navigate with arrow keys to view its interactive 3D model, chemical properties, and download PyMOL sessions.</p>
+        </div>
+
+        <!-- Active Detail State -->
+        <div class="sidebar-details hidden" id="sidebarDetails">
+          <div class="sidebar-header">
+            <span class="detail-mol-id" id="detailMolId">#000</span>
+            <h2 class="detail-mol-name" id="detailMolName">Compound Name</h2>
+            <div class="stereo-badges-row" id="detailStereoBadges"></div>
+          </div>
+
+          <!-- View Mode Selector -->
+          <div class="view-mode-selector">
+            <select id="selectViewMode" class="view-mode-select">
+              <option value="3d">3D View (WebGL)</option>
+              <option value="skeletal">Skeletal (2D)</option>
+              <option value="wedgedash">Wedge-Dash (2D)</option>
+              <option value="lewis">Lewis Structure</option>
+              <option value="full">Full Structural</option>
+              <option value="condensed">Condensed Formula</option>
+              <option value="fischer" id="optFischer" style="display:none;">Fischer Projection</option>
+              <option value="newman" id="optNewman" style="display:none;">Newman Projection</option>
+              <option value="chair" id="optChair" style="display:none;">Chair Conformation</option>
+              <option value="boat" id="optBoat" style="display:none;">Boat Conformation</option>
+            </select>
+          </div>
+
+          <!-- Viewer Container -->
+          <div class="viewer-container">
+            <div id="molecule-3d-viewer" class="molecule-3d-viewer"></div>
+            
+            <!-- 2D View Container -->
+            <div id="molecule-2d-viewer" class="molecule-2d-viewer hidden" style="position:relative;">
+              <div id="molecule-2d-content" class="molecule-2d-content"></div>
+              <button id="btn2dCapture" title="Download as PNG" class="viewer-ctrl-btn" style="position:absolute;bottom:0.6rem;right:0.6rem;z-index:15;">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
+                </svg>
+                Capture
+              </button>
+            </div>
+
+            <!-- Fallback Image -->
+            <img id="viewer-fallback-img" src="" alt="Molecule Preview" class="viewer-fallback-img hidden">
+
+            <!-- Expand Button -->
+            <button class="viewer-ctrl-btn" id="btnExpandViewer" title="Expand to fullscreen" style="position:absolute;top:0.5rem;right:0.5rem;z-index:15;">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L15 9m5.25 11.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+              </svg>
+            </button>
+
+            <!-- 3D Viewer Controls -->
+            <div class="viewer-controls" id="viewerControls">
+              <button class="viewer-ctrl-btn" id="btnSpin" title="Toggle Auto-Rotation">
+                <svg class="ctrl-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3 3L22 4" />
+                </svg>
+                <span id="spinText">Spin Off</span>
+              </button>
+              <button class="viewer-ctrl-btn" id="btnStyle" title="Change Style">
+                <span id="styleText">Style: Ball & Stick</span>
+              </button>
+              <button class="viewer-ctrl-btn" id="btnCapture" title="Download PNG Snapshot">
+                <svg class="ctrl-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                </svg>
+                <span>Capture</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Properties Grid -->
+          <div class="detail-properties">
+            <div class="detail-prop-card">
+              <span class="detail-prop-label">Formula</span>
+              <span class="detail-prop-val" id="detailFormula">-</span>
+            </div>
+            <div class="detail-prop-card">
+              <span class="detail-prop-label">MW</span>
+              <span class="detail-prop-val" id="detailWeight">-</span>
+            </div>
+            <div class="detail-prop-card" style="grid-column: span 2;">
+              <span class="detail-prop-label">SMILES</span>
+              <span class="detail-prop-val mono" id="detailSmiles">-</span>
+              <div class="smiles-help" id="smilesHelpBanner">
+                <button class="smiles-help-toggle" id="smilesHelpToggle" type="button" aria-expanded="false" aria-controls="smilesHelpBody">
+                  <span>How to read SMILES</span>
+                  <span class="caret">▼</span>
+                </button>
+                <div class="smiles-help-body" id="smilesHelpBody">
+                  <p><code>C</code> chain letters are atoms. Numbers close rings, for example <code>C1CCCCC1</code>.</p>
+                  <p><code>=</code> and <code>#</code> indicate double and triple bonds.</p>
+                  <p><code>()</code> marks branches: <code>CC(C)C</code> means a 3-carbon chain with a methyl branch on the middle carbon.</p>
+                  <p><code>@</code> and <code>@@</code> mark tetrahedral configurations (enantiomers), corresponding to R/S assignments.</p>
+                  <p><code>[]</code> is for explicit atoms/charges/isotopes: <code>[NH4+]</code>, <code>[Cl-]</code>, <code>[13CH3]</code>.</p>
+                  <p><code>/</code> and <code>\</code> set alkene geometry: <code>C/C=C/C</code> is trans (E), while <code>C/C=C\C</code> is cis (Z).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Categories/Badges -->
+          <div class="detail-categories" id="detailCategories"></div>
+
+          <!-- Action Buttons -->
+          <div class="sidebar-actions">
+            <button class="sidebar-action-btn primary" id="btnCopyName">
+              <svg class="action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-2 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Copy IUPAC Name</span>
+            </button>
+            <a class="sidebar-action-btn" id="btnDownloadPse" href="#" download>
+              <svg class="action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>PyMOL Session (.pse)</span>
+            </a>
+            <a class="sidebar-action-btn" id="btnDownloadSdf" href="#" download>
+              <svg class="action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>Structure (.sdf)</span>
+            </a>
+            <a class="sidebar-action-btn" id="btnPubchem" href="#" target="_blank" rel="noopener">
+              <svg class="action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              <span>PubChem View</span>
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState">
+      <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <h3 class="empty-title">No IUPAC Names Found</h3>
+      <p class="empty-desc">We couldn't find any chemical names matching your query in the answer key.</p>
+    </div>
+  </div>
+
+  <!-- Mobile Drawer Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <div class="toast-icon-wrapper">
+      <svg style="width:0.9rem; height:0.9rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+      </svg>
+    </div>
+    <span class="toast-text" id="toastText">Copied!</span>
+  </div>
+
+  <!-- Large Viewer Modal -->
+  <div id="largeViewerModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
+    <div style="position:relative;width:90vw;max-width:900px;height:80vh;background:var(--bg-secondary);border-radius:18px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.6);">
+      <button onclick="document.getElementById('largeViewerModal').style.display='none'" style="position:absolute;top:1rem;right:1rem;z-index:10;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:8px;padding:0.4rem 0.8rem;cursor:pointer;font-weight:bold;font-family:sans-serif;">✕ Close</button>
+      <div id="modal-3d-viewer" style="width:100%;height:100%;"></div>
+    </div>
+  </div>
+
+  <!-- External JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
