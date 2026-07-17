@@ -10,7 +10,6 @@ on:
       - 'molecules.json'
       - 'build_offline.py'
       - '.github/workflows/deploy.yml'
-    tags: [ 'v*' ]  # Also trigger on version tags
   workflow_dispatch:  # Allow manual triggering
   schedule:
     - cron: '0 0 * * 0'  # Weekly build
@@ -104,10 +103,10 @@ jobs:
         echo "Visit: ${{ steps.deployment.outputs.page_url }}"
 
   create-release:
-    name: Create Release (on Tag)
+    name: Create Semantic Patch Release
     needs: build-offline
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'push' && github.ref_type == 'branch'
     
     steps:
     - name: 📥 Checkout code
@@ -121,14 +120,28 @@ jobs:
     - name: 🔨 Build offline version
       run: python build_offline.py
     
-    - name: 📝 Get tag name
+    - name: 📝 Calculate next semantic patch version
       id: tag
-      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      shell: bash
+      run: |
+        latest_tag=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
+        if [[ -z "$latest_tag" ]]; then
+          next_tag="v1.0.0"
+        elif [[ "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          next_tag="v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+        else
+          echo "Latest tag '$latest_tag' is not a semantic version (vMAJOR.MINOR.PATCH)."
+          exit 1
+        fi
+        echo "TAG_NAME=$next_tag" >> "$GITHUB_OUTPUT"
+        echo "Creating release $next_tag for commit $GITHUB_SHA"
     
     - name: 🎯 Create Release
       uses: softprops/action-gh-release@v1
       with:
         name: "IUPAC Chemistry App - ${{ steps.tag.outputs.TAG_NAME }}"
+        tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+        target_commitish: ${{ github.sha }}
         body: |
           ## 🧪 IUPAC Chemistry Vocabulary Companion
           
