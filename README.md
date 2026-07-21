@@ -1,6 +1,8 @@
 # IUPAC Vocabulary Companion - Project Structure
 
-A refactored, maintainable version of your organic chemistry IUPAC exam companion.
+A refactored, maintainable version of my organic chemistry IUPAC exam companion.
+
+# online version at https://elonuziel.github.io/IUPAC_Vocabulary_Project/
 
 ## 📁 New File Structure
 
