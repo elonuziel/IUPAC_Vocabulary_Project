@@ -232,6 +232,11 @@ Enjoy studying organic chemistry! 🧪
 
 def main():
     """Main build process"""
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
     
     print("╔════════════════════════════════════════════════════════════╗")
     print("║  IUPAC Chemistry App - Offline Build Generator             ║")

@@ -119,12 +119,25 @@ Edit `script.js`. Sections are clearly marked:
 - Event listeners are all at the bottom
 
 ### **5. Running Locally**
+
+**Option A: Double click batch file (Windows)**
+Simply double-click `launch_website.bat` in the repository root. This will automatically start the local web server and open the site in your browser.
+
+**Option B: Terminal / Command Prompt**
 ```bash
 # Simple HTTP server (Python 3)
-python -m http.server 8000
-
-# Then visit: http://localhost:8000
+python serve.py
 ```
+
+### **6. Building a Self-Contained Offline HTML File**
+
+Whenever you update `molecules.json`, `styles.css`, or `script.js` with new data or features, you can generate a single standalone offline HTML file:
+
+```bash
+python build_offline.py
+```
+
+This generates `IUPAC_Offline.html` (and distribution zip packages), which embeds all current molecules and styles into a single file that can be opened directly in any browser without needing a local web server or internet connection.
 
 ---
 
