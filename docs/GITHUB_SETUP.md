@@ -22,11 +22,9 @@ This guide will help you:
 
 ### Step 2: Automatic Builds (GitHub Actions)
 
-The `.github/workflows/deploy.yml` workflow will:
-- ✅ Run on every push to master/main
-- ✅ Build offline versions automatically
-- ✅ Upload artifacts for download
-- ✅ Deploy to GitHub Pages
+Two workflows run independently:
+- `.github/workflows/deploy.yml` deploys to GitHub Pages automatically on pushes to `master` or `main`.
+- `.github/workflows/offline-build.yml` builds and uploads offline packages on relevant source changes, weekly, or by manual dispatch. It also creates a release after relevant branch pushes.
 
 **No additional setup needed!** The workflow is already configured.
 
@@ -92,19 +90,10 @@ After pushing commits and tags:
 ## 🚀 Workflow Details
 
 ### Automatic Triggers
-The GitHub Action runs when:
-- Push to `master` or `main` branch
-- Manual trigger (Actions → Deploy → Run workflow)
-- Weekly schedule (Sundays at midnight UTC)
-- Changes to key files (HTML, CSS, JS, JSON)
+The Pages workflow runs on pushes to `master` or `main`, or by manual dispatch. The offline workflow runs when its source files change on those branches, every Sunday at midnight UTC, or by manual dispatch.
 
-### Build Steps
-1. Checkout code
-2. Set up Python
-3. Run `build_offline.py`
-4. Upload artifacts
-5. Deploy to GitHub Pages
-6. (Optionally) Create release if tag
+### Workflow Responsibilities
+The Pages workflow builds and deploys the site without depending on offline packaging. The offline workflow runs `build_offline.py`, uploads the generated artifacts, and creates a semantic patch release after source-changing pushes.
 
 ## 📊 Live URL
 

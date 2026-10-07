@@ -14,12 +14,9 @@
 - ✅ Site will be live at: **https://elonuziel.github.io/IUPAC_Vocabulary_Project/**
 
 ### 2. **Automated Builds (GitHub Actions)**
-- ✅ `.github/workflows/deploy.yml` - Complete CI/CD pipeline
-- ✅ Auto-builds on push to master/main
-- ✅ Creates offline versions automatically
-- ✅ Deploys to GitHub Pages
-- ✅ Creates releases on git tags
-- ✅ Runs weekly schedule
+- ✅ `.github/workflows/deploy.yml` - Deploys to GitHub Pages on pushes to master/main
+- ✅ `.github/workflows/offline-build.yml` - Builds offline packages automatically on source changes and weekly
+- ✅ Offline artifacts and semantic patch releases are handled independently from Pages deployment
 
 ### 3. **Build System**
 - ✅ `build_offline.py` - Python script to generate offline versions
@@ -105,9 +102,10 @@ IUPAC_Vocabulary_Project/
 ├── 🔨 build_offline.py             ← Build script
 ├── 🏗️ _config.yml                   ← Jekyll config
 ├── 📦 .gitignore                    ← Git ignore rules
-├── 🤖 .github/
-│   └── workflows/
-│       └── deploy.yml              ← GitHub Actions workflow
+└── 🤖 .github/
+    └── workflows/
+        ├── deploy.yml              ← GitHub Pages deployment
+        └── offline-build.yml       ← Offline packages and releases
 ├── 🗂️ structures/
 │   ├── images/
 │   ├── sdf/
@@ -123,19 +121,9 @@ IUPAC_Vocabulary_Project/
 ## 🔄 GitHub Actions Workflow
 
 ### What It Does
-The workflow runs automatically on:
-- ✅ Every push to master/main branch
-- ✅ Manual trigger from Actions tab
-- ✅ Weekly schedule (Sundays)
-- ✅ When git tag is created
-
-### Build Steps
-1. Checkout code
-2. Set up Python 3.11
-3. Run `build_offline.py`
-4. Upload artifacts
-5. Deploy to GitHub Pages
-6. Create release (if tag)
+- The Pages workflow deploys automatically on every push to master/main and can be run manually.
+- The offline workflow builds on relevant source changes, weekly on Sundays, or by manual dispatch.
+- The offline workflow uploads downloadable artifacts and creates a semantic patch release after relevant branch pushes.
 
 ### Generated Artifacts
 - Available for 90 days in Actions tab
