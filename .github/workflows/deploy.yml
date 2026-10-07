@@ -7,12 +7,14 @@ on:
       - 'index.html'
       - 'styles.css'
       - 'script.js'
+      - 'src/**'
+      - 'dist/**'
       - 'molecules.json'
       - 'build_offline.py'
       - '.github/workflows/deploy.yml'
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 0'  # Weekly build
+    - cron: '0 0 * * 0'
 
 permissions:
   contents: write
@@ -27,24 +29,29 @@ jobs:
   build-offline:
     name: Build Offline Version
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: 🐍 Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
+    - name: 📦 Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
     - name: 🔨 Build offline version
       run: |
         echo "Building offline IUPAC Chemistry App..."
         python build_offline.py
         ls -lh IUPAC_*.* || true
-    
+
     - name: 📦 Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -55,12 +62,15 @@ jobs:
           IUPAC_Chemistry_Modular.zip
         retention-days: 90
         if-no-files-found: warn
-    
+
     - name: 📊 Show build summary
       run: |
         echo "=== Build Summary ==="
         echo "Files created:"
         ls -lh IUPAC_*.* 2>/dev/null || echo "No files found"
+        echo "Directory structure:"
+        [ -d "src" ] && echo "✓ src/ directory found" || echo "✗ src/ directory not found"
+        [ -d "dist" ] && echo "✓ dist/ directory found" || echo "✗ dist/ directory not found"
         echo "Total size:"
         du -sh . | head -1
 
@@ -69,34 +79,34 @@ jobs:
     needs: build-offline
     runs-on: ubuntu-latest
     if: always()
-    
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-    
+
     - name: 🔧 Setup Pages
       uses: actions/configure-pages@v4
-    
-    - name: 🏗️  Build site
+
+    - name: 🏗️ Build site
       uses: actions/jekyll-build-pages@v1
       with:
         source: ./
         destination: ./_site
-    
+
     - name: 📤 Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: './_site'
-    
+
     - name: 🚀 Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
       continue-on-error: true
-    
+
     - name: ✅ Deployment complete
       run: |
         echo "GitHub Pages deployment complete!"
@@ -107,21 +117,26 @@ jobs:
     needs: build-offline
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-    
+
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: 🐍 Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
+    - name: 📦 Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
     - name: 🔨 Build offline version
       run: python build_offline.py
-    
+
     - name: 📝 Calculate next semantic patch version
       id: tag
       shell: bash
@@ -137,7 +152,7 @@ jobs:
         fi
         echo "TAG_NAME=$next_tag" >> "$GITHUB_OUTPUT"
         echo "Creating release $next_tag for commit $GITHUB_SHA"
-    
+
     - name: 🎯 Create Release
       uses: softprops/action-gh-release@v1
       with:
@@ -146,15 +161,15 @@ jobs:
         target_commitish: ${{ github.sha }}
         body: |
           ## 🧪 IUPAC Chemistry Vocabulary Companion
-          
+
           Download the offline version to use anywhere, anytime - no internet needed!
-          
+
           ### 📥 Choose Your Format:
-          
+
           - **IUPAC_Offline.html** - Single file, just open in browser
           - **IUPAC_Chemistry_Offline.zip** - Standalone package with guide
           - **IUPAC_Chemistry_Modular.zip** - Source files for customization
-          
+
           ### ✨ Features:
           - 184 molecules with IUPAC nomenclature
           - 3D interactive molecular viewer
@@ -163,12 +178,12 @@ jobs:
           - Dark/Light theme
           - Works completely offline
           - No internet required
-          
+
           ### 🚀 Quick Start:
           1. Download one of the files above
           2. Open the HTML file in your web browser
           3. Start learning!
-          
+
           [📖 Full Documentation](https://github.com/elonuziel/IUPAC_Vocabulary_Project#readme)
         files: |
           IUPAC_Offline.html
