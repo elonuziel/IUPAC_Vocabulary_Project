@@ -1,0 +1,130 @@
+name: Build Offline Distribution
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'index.html'
+      - 'styles.css'
+      - 'script.js'
+      - 'src/**'
+      - 'molecules.json'
+      - 'README.md'
+      - 'build_offline.py'
+      - 'scripts/**'
+      - '.github/workflows/offline-build.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-offline:
+    name: Build Offline Version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Build offline version
+        run: python build_offline.py
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: IUPAC_Chemistry_Offline
+          path: |
+            IUPAC_Offline.html
+            IUPAC_Chemistry_Offline.zip
+            IUPAC_Chemistry_Modular.zip
+          retention-days: 90
+          if-no-files-found: error
+
+  create-release:
+    name: Create Semantic Patch Release
+    needs: build-offline
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download offline artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: IUPAC_Chemistry_Offline
+          path: ./release-assets
+
+      - name: Calculate next semantic patch version
+        id: tag
+        shell: bash
+        run: |
+          latest_tag=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
+          if [[ -z "$latest_tag" ]]; then
+            next_tag="v1.0.0"
+          elif [[ "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            next_tag="v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+          else
+            echo "Latest tag '$latest_tag' is not a semantic version (vMAJOR.MINOR.PATCH)."
+            exit 1
+          fi
+          echo "TAG_NAME=$next_tag" >> "$GITHUB_OUTPUT"
+          echo "Creating release $next_tag for commit $GITHUB_SHA"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "IUPAC Chemistry App - ${{ steps.tag.outputs.TAG_NAME }}"
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            ## IUPAC Chemistry Vocabulary Companion
+
+            Download the offline version to use anywhere, anytime - no internet needed!
+
+            ### Choose Your Format
+
+            - **IUPAC_Offline.html** - Single file, just open in browser
+            - **IUPAC_Chemistry_Offline.zip** - Standalone package with guide
+            - **IUPAC_Chemistry_Modular.zip** - Source files for customization
+
+            ### Features
+            - 184 molecules with IUPAC nomenclature
+            - 3D interactive molecular viewer
+            - Multiple 2D projection types
+            - Quiz mode with scoring
+            - Dark/Light theme
+            - Works completely offline
+            - No internet required
+
+            ### Quick Start
+            1. Download one of the files above
+            2. Open the HTML file in your web browser
+            3. Start learning!
+
+            [Full Documentation](https://github.com/elonuziel/IUPAC_Vocabulary_Project#readme)
+          files: |
+            release-assets/IUPAC_Offline.html
+            release-assets/IUPAC_Chemistry_Offline.zip
+            release-assets/IUPAC_Chemistry_Modular.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
