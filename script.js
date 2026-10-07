@@ -54,6 +54,7 @@ let molecules = [];
 let searchQuery = "";
 let selectedCategory = "all";
 let activeNavIndex = -1;
+let activeNavCard = null;
 let currentFilteredList = [];
 let selectedMoleculeIndex = -1;
 let glViewer = null;
@@ -232,6 +233,7 @@ function renderMolecules() {
   });
 
   activeNavIndex = -1;
+  activeNavCard = null;
 
   if (currentFilteredList.length === 0) {
     emptyState.style.display = "flex";
@@ -491,15 +493,17 @@ function selectMolecule(index) {
 }
 
 function updateActiveNavCard() {
-  document.querySelectorAll(".molecule-card").forEach(c =>
-    c.classList.remove("active-nav")
-  );
+  if (activeNavCard) {
+    activeNavCard.classList.remove("active-nav");
+    activeNavCard = null;
+  }
 
   if (activeNavIndex >= 0 && activeNavIndex < currentFilteredList.length) {
     const activeCard = document.getElementById(`mol-card-${activeNavIndex}`);
     if (activeCard) {
       activeCard.classList.add("active-nav");
       activeCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      activeNavCard = activeCard;
     }
   }
 }
@@ -945,9 +949,7 @@ function closeSidebar() {
   detailSidebar.classList.remove("open");
   sidebarOverlay.classList.remove("open");
   activeNavIndex = -1;
-  document.querySelectorAll(".molecule-card").forEach(c =>
-    c.classList.remove("active-nav")
-  );
+  updateActiveNavCard();
 }
 
 // ── EVENT LISTENERS ──────────────────────────────────────────────
