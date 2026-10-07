@@ -397,21 +397,7 @@ function renderMolecules() {
   });
 }
 
-function selectMolecule(index) {
-  selectedMoleculeIndex = index;
-  activeNavIndex = index;
-  updateActiveNavCard();
-
-  const mol = currentFilteredList[index];
-  if (!mol) return;
-
-  sidebarWelcome.classList.add("hidden");
-  sidebarDetails.classList.remove("hidden");
-
-  detailSidebar.classList.add("open");
-  sidebarOverlay.classList.add("open");
-
-  // Update details
+function updateMoleculeDetails(mol) {
   detailMolId.textContent = `#${String(mol.id).padStart(3, "0")}`;
   detailMolName.textContent = mol.original_name;
   detailFormula.textContent = mol.formula || "N/A";
@@ -473,7 +459,9 @@ function selectMolecule(index) {
   } else {
     btnPubchem.style.display = "none";
   }
+}
 
+function initializeViewerForMolecule(mol) {
   // Update 2D options visibility
   const selectViewMode = document.getElementById("selectViewMode");
   const optFischer = document.getElementById("optFischer");
@@ -498,6 +486,24 @@ function selectMolecule(index) {
   }
 
   updateMoleculeRepresentation();
+}
+
+function selectMolecule(index) {
+  selectedMoleculeIndex = index;
+  activeNavIndex = index;
+  updateActiveNavCard();
+
+  const mol = currentFilteredList[index];
+  if (!mol) return;
+
+  sidebarWelcome.classList.add("hidden");
+  sidebarDetails.classList.remove("hidden");
+
+  detailSidebar.classList.add("open");
+  sidebarOverlay.classList.add("open");
+
+  updateMoleculeDetails(mol);
+  initializeViewerForMolecule(mol);
 }
 
 function updateActiveNavCard() {
