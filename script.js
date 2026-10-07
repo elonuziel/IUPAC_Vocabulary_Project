@@ -118,6 +118,9 @@ async function init() {
   try {
     const response = await fetch("molecules.json");
     molecules = await response.json();
+    molecules.forEach(m => {
+      m._lowerCategories = m.categories ? m.categories.map(c => c.toLowerCase()) : [];
+    });
   } catch (err) {
     console.error("Failed to load molecules.json:", err);
     molecules = [];
@@ -160,10 +163,17 @@ function check3DmolAvailability() {
 
 // ── FILTERS & STATS ─────────────────────────────────────────────
 function setupFilters() {
+  const categoryCounts = {};
+  molecules.forEach(m => {
+    if (m._lowerCategories) {
+      m._lowerCategories.forEach(cat => {
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
+    }
+  });
+
   CATEGORIES.forEach(cat => {
-    const count = molecules.filter(m =>
-      m.categories.map(c => c.toLowerCase()).includes(cat)
-    ).length;
+    const count = categoryCounts[cat] || 0;
     if (count > 0) {
       const btn = document.createElement("button");
       btn.className = "filter-btn";
@@ -212,7 +222,7 @@ function renderMolecules() {
   currentFilteredList = molecules.filter(m => {
     if (onlyStarred && !starredIds.has(m.id)) return false;
     if (selectedCategory !== "all") {
-      if (!m.categories.map(c => c.toLowerCase()).includes(selectedCategory)) {
+      if (m._lowerCategories ? !m._lowerCategories.includes(selectedCategory) : !m.categories.map(c => c.toLowerCase()).includes(selectedCategory)) {
         return false;
       }
     }
@@ -222,9 +232,9 @@ function renderMolecules() {
       const matchesName = m.original_name.toLowerCase().includes(query);
       const matchesFormula = m.formula && m.formula.toLowerCase().includes(query);
       const matchesSmiles = m.smiles && m.smiles.toLowerCase().includes(query);
-      const matchesCategory = m.categories.some(c =>
-        c.toLowerCase().includes(query)
-      );
+      const matchesCategory = m._lowerCategories
+        ? m._lowerCategories.some(c => c.includes(query))
+        : m.categories.some(c => c.toLowerCase().includes(query));
       return matchesName || matchesFormula || matchesSmiles || matchesCategory;
     }
 
