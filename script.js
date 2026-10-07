@@ -54,6 +54,7 @@ let molecules = [];
 let searchQuery = "";
 let selectedCategory = "all";
 let activeNavIndex = -1;
+let activeNavCard = null;
 let currentFilteredList = [];
 let selectedMoleculeIndex = -1;
 let glViewer = null;
@@ -113,18 +114,15 @@ const btnDownloadSdf = document.getElementById("btnDownloadSdf");
 const btnPubchem = document.getElementById("btnPubchem");
 
 // ── INITIALIZATION ───────────────────────────────────────────────
-function preprocessMolecules() {
-  molecules.forEach(m => {
-    m.lowerCategories = (m.categories || []).map(c => c.toLowerCase());
-  });
-}
-
 async function init() {
   // Load data from JSON file
   try {
     const response = await fetch("molecules.json");
     molecules = await response.json();
-    preprocessMolecules();
+    // Precompute lowercase categories on molecule objects (PR #2 optimization)
+    molecules.forEach(m => {
+      m._lowerCategories = m.categories ? m.categories.map(c => c.toLowerCase()) : [];
+    });
   } catch (err) {
     console.error("Failed to load molecules.json:", err);
     molecules = [];
@@ -167,10 +165,18 @@ function check3DmolAvailability() {
 
 // ── FILTERS & STATS ─────────────────────────────────────────────
 function setupFilters() {
+  // PR #2 optimization: compute category counts in a single pass
+  const categoryCounts = {};
+  molecules.forEach(m => {
+    if (m._lowerCategories) {
+      m._lowerCategories.forEach(cat => {
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
+    }
+  });
+
   CATEGORIES.forEach(cat => {
-    const count = molecules.filter(m =>
-      (m.lowerCategories || []).includes(cat)
-    ).length;
+    const count = categoryCounts[cat] || 0;
     if (count > 0) {
       const btn = document.createElement("button");
       btn.className = "filter-btn";
@@ -219,7 +225,7 @@ function renderMolecules() {
   currentFilteredList = molecules.filter(m => {
     if (onlyStarred && !starredIds.has(m.id)) return false;
     if (selectedCategory !== "all") {
-      if (!(m.lowerCategories || []).includes(selectedCategory)) {
+      if (m._lowerCategories ? !m._lowerCategories.includes(selectedCategory) : !m.categories.map(c => c.toLowerCase()).includes(selectedCategory)) {
         return false;
       }
     }
@@ -229,9 +235,9 @@ function renderMolecules() {
       const matchesName = m.original_name.toLowerCase().includes(query);
       const matchesFormula = m.formula && m.formula.toLowerCase().includes(query);
       const matchesSmiles = m.smiles && m.smiles.toLowerCase().includes(query);
-      const matchesCategory = (m.lowerCategories || []).some(c =>
-        c.includes(query)
-      );
+      const matchesCategory = m._lowerCategories
+        ? m._lowerCategories.some(c => c.includes(query))
+        : m.categories.some(c => c.toLowerCase().includes(query));
       return matchesName || matchesFormula || matchesSmiles || matchesCategory;
     }
 
@@ -239,6 +245,7 @@ function renderMolecules() {
   });
 
   activeNavIndex = -1;
+  activeNavCard = null;
 
   if (currentFilteredList.length === 0) {
     emptyState.style.display = "flex";
@@ -299,7 +306,8 @@ function renderMolecules() {
       previewHTML = `
         <div class="molecule-preview-wrapper" style="background: rgba(0,0,0,0.015)">
           <svg class="structure-fallback" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375M15.75 12H4.5M15.75 12l-3-3m3 3l3-3M3.375 6.75h16.5A1.125 1.125 0 0121 7.875v10.5a1.125 1.125 0 01-1.125 1.125H3.375a1.125 1.125 0 01-1.125-1.125V7.875a1.125 1.125 0 011.125-1.125z">
+            </path>
           </svg>
         </div>
       `;
@@ -309,7 +317,7 @@ function renderMolecules() {
     if (mol.skeletal_svg) {
       thumbHTML = `<div class="card-thumb">${mol.skeletal_svg}</div>`;
     } else {
-      thumbHTML = `<div class="card-thumb no-svg"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" opacity="0.4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 4.5H12m-1.5 4.5H12m-1.5 4.5H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg></div>`;
+      thumbHTML = `<div class="card-thumb no-svg"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" opacity="0.4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375M15.75 12H4.5M15.75 12l-3-3m3 3l3-3M3.375 6.75h16.5A1.125 1.125 0 0121 7.875v10.5a1.125 1.125 0 01-1.125 1.125H3.375a1.125 1.125 0 01-1.125-1.125V7.875a1.125 1.125 0 011.125-1.125z"></path></svg></div>`;
     }
 
     const isStarred = starredIds.has(mol.id);
@@ -333,7 +341,8 @@ function renderMolecules() {
       <div class="card-right">
         <button class="copy-btn" data-copy-btn="${idx}" title="Copy IUPAC name">
           <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0015 2.25h-1.5a2.251 2.251 0 00-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 00-9-9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.141 0c-.892.029-1.776.147-2.654.291A6.332 6.332 0 0012 18a6.332 6.332 0 006.585-7.292m-10.725 0A6.332 6.332 0 0112 5.25">
+            </path>
           </svg>
           <span>Copy</span>
         </button>
@@ -498,15 +507,18 @@ function selectMolecule(index) {
 }
 
 function updateActiveNavCard() {
-  document.querySelectorAll(".active-nav").forEach(c =>
-    c.classList.remove("active-nav")
-  );
+  // PR #4 optimization: use direct reference instead of DOM traversal
+  if (activeNavCard) {
+    activeNavCard.classList.remove("active-nav");
+    activeNavCard = null;
+  }
 
   if (activeNavIndex >= 0 && activeNavIndex < currentFilteredList.length) {
     const activeCard = document.getElementById(`mol-card-${activeNavIndex}`);
     if (activeCard) {
       activeCard.classList.add("active-nav");
       activeCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      activeNavCard = activeCard;
     }
   }
 }
@@ -952,9 +964,7 @@ function closeSidebar() {
   detailSidebar.classList.remove("open");
   sidebarOverlay.classList.remove("open");
   activeNavIndex = -1;
-  document.querySelectorAll(".active-nav").forEach(c =>
-    c.classList.remove("active-nav")
-  );
+  updateActiveNavCard();
 }
 
 // ── EVENT LISTENERS ──────────────────────────────────────────────
