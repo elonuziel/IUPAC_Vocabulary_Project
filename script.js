@@ -968,7 +968,7 @@ function closeSidebar() {
 }
 
 // ── EVENT LISTENERS ──────────────────────────────────────────────
-function setupEventListeners() {
+function setupSearchListeners() {
   // Search input
   searchInput.addEventListener("input", e => {
     searchQuery = e.target.value;
@@ -986,7 +986,9 @@ function setupEventListeners() {
     searchInput.focus();
     renderMolecules();
   });
+}
 
+function setupThemeListeners() {
   // Theme toggle
   themeToggleBtn.addEventListener("click", () => {
     const isDark = document.documentElement.classList.toggle("dark-theme");
@@ -996,28 +998,33 @@ function setupEventListeners() {
       glViewer.render();
     }
   });
+}
 
+function setupSidebarListeners() {
   // Sidebar close
   btnSidebarClose.addEventListener("click", closeSidebar);
   sidebarOverlay.addEventListener("click", closeSidebar);
 
-  // View mode change
-  document.getElementById("selectViewMode").addEventListener("change", updateMoleculeRepresentation);
+  // Copy name in sidebar
+  btnCopyName.addEventListener("click", () => {
+    if (selectedMoleculeIndex >= 0) {
+      const mol = currentFilteredList[selectedMoleculeIndex];
+      copyToClipboard(mol.original_name, "IUPAC Name Copied!");
+    }
+  });
 
-  // Starred filter
-  const btnStarredFilter = document.getElementById("btnStarredFilter");
-  if (btnStarredFilter) {
-    btnStarredFilter.addEventListener("click", () => {
-      btnStarredFilter.classList.toggle("active");
-      renderMolecules();
+  // SMILES help toggle
+  if (smilesHelpToggle && smilesHelpBanner) {
+    smilesHelpToggle.addEventListener("click", () => {
+      const isOpen = smilesHelpBanner.classList.toggle("open");
+      smilesHelpToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
     });
   }
+}
 
-  // Quiz mode button
-  const btnQuizMode = document.getElementById("btnQuizMode");
-  if (btnQuizMode) {
-    btnQuizMode.addEventListener("click", toggleQuiz);
-  }
+function setupViewerListeners() {
+  // View mode change
+  document.getElementById("selectViewMode").addEventListener("change", updateMoleculeRepresentation);
 
   // 3D controls
   btnSpin.addEventListener("click", () => {
@@ -1055,23 +1062,54 @@ function setupEventListeners() {
   if (btn2dCapture) {
     btn2dCapture.addEventListener("click", download2dSnapshot);
   }
+}
 
-  // Copy name in sidebar
-  btnCopyName.addEventListener("click", () => {
-    if (selectedMoleculeIndex >= 0) {
-      const mol = currentFilteredList[selectedMoleculeIndex];
-      copyToClipboard(mol.original_name, "IUPAC Name Copied!");
-    }
-  });
-
-  // SMILES help toggle
-  if (smilesHelpToggle && smilesHelpBanner) {
-    smilesHelpToggle.addEventListener("click", () => {
-      const isOpen = smilesHelpBanner.classList.toggle("open");
-      smilesHelpToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+function setupFilterListeners() {
+  // Starred filter
+  const btnStarredFilter = document.getElementById("btnStarredFilter");
+  if (btnStarredFilter) {
+    btnStarredFilter.addEventListener("click", () => {
+      btnStarredFilter.classList.toggle("active");
+      renderMolecules();
     });
   }
 
+  // Filter buttons
+  filtersContainer.addEventListener("click", e => {
+    const btn = e.target.closest(".filter-btn");
+    if (!btn) return;
+
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    selectedCategory = btn.getAttribute("data-category");
+    renderMolecules();
+  });
+}
+
+function setupQuizListeners() {
+  // Quiz mode button
+  const btnQuizMode = document.getElementById("btnQuizMode");
+  if (btnQuizMode) {
+    btnQuizMode.addEventListener("click", toggleQuiz);
+  }
+
+  // Quiz button (fixed)
+  document.addEventListener("click", e => {
+    if (e.target.id === "btnQuit Quiz") {
+      toggleQuiz();
+    }
+  });
+
+  // Reset quiz button
+  document.addEventListener("click", e => {
+    if (e.target.textContent === "Reset") {
+      resetQuizScore();
+    }
+  });
+}
+
+function setupKeyboardListeners() {
   // Global keyboard shortcuts
   window.addEventListener("keydown", e => {
     if (e.key === "/" && document.activeElement !== searchInput) {
@@ -1115,32 +1153,16 @@ function setupEventListeners() {
       }
     }
   });
+}
 
-  // Filter buttons
-  filtersContainer.addEventListener("click", e => {
-    const btn = e.target.closest(".filter-btn");
-    if (!btn) return;
-
-    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    selectedCategory = btn.getAttribute("data-category");
-    renderMolecules();
-  });
-
-  // Quiz button (fixed)
-  document.addEventListener("click", e => {
-    if (e.target.id === "btnQuit Quiz") {
-      toggleQuiz();
-    }
-  });
-
-  // Reset quiz button
-  document.addEventListener("click", e => {
-    if (e.target.textContent === "Reset") {
-      resetQuizScore();
-    }
-  });
+function setupEventListeners() {
+  setupSearchListeners();
+  setupThemeListeners();
+  setupSidebarListeners();
+  setupViewerListeners();
+  setupFilterListeners();
+  setupQuizListeners();
+  setupKeyboardListeners();
 }
 
 // ── START APPLICATION ────────────────────────────────────────────
