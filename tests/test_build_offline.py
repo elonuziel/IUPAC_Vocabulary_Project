@@ -67,3 +67,19 @@ def test_read_file_encoding_error(tmp_path, capsys):
 
     captured = capsys.readouterr()
     assert f"❌ Error reading {test_file}:" in captured.out
+
+from scripts.bundle_js import bundle_js
+
+def test_bundle_js(tmp_path):
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "01_first.js").write_text("const a = 1;", encoding="utf-8")
+    (src_dir / "02_second.js").write_text("const b = 2;", encoding="utf-8")
+
+    output_file = tmp_path / "bundle.js"
+    bundle_js(src_dir=str(src_dir), output_file=str(output_file))
+
+    assert output_file.exists()
+    content = output_file.read_text(encoding="utf-8")
+    assert "const a = 1;" in content
+    assert "const b = 2;" in content
