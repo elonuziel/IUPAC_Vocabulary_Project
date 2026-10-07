@@ -1,9 +1,12 @@
 /* ────────────────────────────────────────────────────────────────
-   IUPAC Vocabulary Companion - JavaScript
+   IUPAC Vocabulary Companion - JavaScript (Bundled from src/)
    Main logic for search, filtering, 3D/2D viewing, quiz mode
    ──────────────────────────────────────────────────────────────── */
 
-// ── CONSTANTS ────────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Constants
+   ──────────────────────────────────────────────────────────────── */
+
 const CATEGORIES = [
   "stereochemistry", "haloalkane", "alkene", "alkyne", "cyclic", "aromatic",
   "alcohol", "ether", "carboxylic acid", "ester", "amide", "anhydride",
@@ -25,7 +28,10 @@ const FG_ATOMS = {
 const NO_SVG_ICON = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" opacity="0.4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375M15.75 12H4.5M15.75 12l-3-3m3 3l3-3M3.375 6.75h16.5A1.125 1.125 0 0121 7.875v10.5a1.125 1.125 0 01-1.125 1.125H3.375a1.125 1.125 0 01-1.125-1.125V7.875a1.125 1.125 0 011.125-1.125z"></path></svg>`;
 const COPY_ICON = `<svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.141 0c-.892.029-1.776.147-2.654.291A6.332 6.332 0 0012 18a6.332 6.332 0 006.585-7.292m-10.725 0A6.332 6.332 0 0112 5.25"></path></svg>`;
 
-// ── SAFE LOCALSTORAGE HELPER ──────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Safe Storage Wrapper
+   ──────────────────────────────────────────────────────────────── */
+
 const safeStorage = {
   getItem(key, defaultValue = null) {
     try {
@@ -52,7 +58,10 @@ const safeStorage = {
   }
 };
 
-// ── GLOBAL STATE ─────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Global State
+   ──────────────────────────────────────────────────────────────── */
+
 let molecules = [];
 let searchQuery = "";
 let selectedCategory = "all";
@@ -79,7 +88,10 @@ let quizGot = parseInt(safeStorage.getItem("quiz_got", "0"));
 let quizMiss = parseInt(safeStorage.getItem("quiz_miss", "0"));
 let activeFgBadge = null;
 
-// ── DOM ELEMENTS ─────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - DOM Elements
+   ──────────────────────────────────────────────────────────────── */
+
 const searchInput = document.getElementById("searchInput");
 const clearBtn = document.getElementById("clearBtn");
 const shortcutBadge = document.getElementById("shortcutBadge");
@@ -116,32 +128,10 @@ const btnDownloadPse = document.getElementById("btnDownloadPse");
 const btnDownloadSdf = document.getElementById("btnDownloadSdf");
 const btnPubchem = document.getElementById("btnPubchem");
 
-// ── INITIALIZATION ───────────────────────────────────────────────
-async function init() {
-  // Load data from JSON file
-  try {
-    const response = await fetch("molecules.json");
-    molecules = await response.json();
-    // Precompute lowercase categories on molecule objects (PR #2 optimization)
-    molecules.forEach(m => {
-      m._lowerCategories = m.categories ? m.categories.map(c => c.toLowerCase()) : [];
-    });
-  } catch (err) {
-    console.error("Failed to load molecules.json:", err);
-    molecules = [];
-  }
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Theme & 3D Availability
+   ──────────────────────────────────────────────────────────────── */
 
-  setupTheme();
-  setupFilters();
-  updateStats();
-  renderMolecules();
-  setupEventListeners();
-  check3DmolAvailability();
-
-  console.log(`Loaded ${molecules.length} molecules. Application ready.`);
-}
-
-// ── THEME MANAGEMENT ────────────────────────────────────────────
 function setupTheme() {
   const savedTheme = safeStorage.getItem("theme") || "dark";
   if (savedTheme === "dark") {
@@ -166,9 +156,11 @@ function check3DmolAvailability() {
   }
 }
 
-// ── FILTERS & STATS ─────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Filters & Stats
+   ──────────────────────────────────────────────────────────────── */
+
 function setupFilters() {
-  // PR #2 optimization: compute category counts in a single pass
   const categoryCounts = {};
   molecules.forEach(m => {
     if (m._lowerCategories) {
@@ -213,7 +205,10 @@ function updateStats() {
   document.getElementById("stat-unsaturated").textContent = unsatCount;
 }
 
-// ── SEARCH & RENDERING ──────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Search & Rendering
+   ──────────────────────────────────────────────────────────────── */
+
 function highlightText(text, query) {
   if (!query) return text;
   const escapedQuery = query.replace(/[-/\^$*+?.()|[\]{}]/g, "\\$&");
@@ -397,6 +392,10 @@ function renderMolecules() {
   });
 }
 
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Detail Sidebar
+   ──────────────────────────────────────────────────────────────── */
+
 function updateMoleculeDetails(mol) {
   detailMolId.textContent = `#${String(mol.id).padStart(3, "0")}`;
   detailMolName.textContent = mol.original_name;
@@ -404,7 +403,6 @@ function updateMoleculeDetails(mol) {
   detailWeight.textContent = mol.weight ? `${mol.weight} g/mol` : "N/A";
   detailSmiles.textContent = mol.smiles || "N/A";
 
-  // Update badges
   detailCategories.innerHTML = mol.categories
     .map(cat => {
       const className = cat.toLowerCase().replace(/\s+/g, "-");
@@ -412,7 +410,6 @@ function updateMoleculeDetails(mol) {
     })
     .join("");
 
-  // Attach functional group highlight listeners
   detailCategories.querySelectorAll("[data-fg-category]").forEach(badge => {
     badge.style.cursor = "pointer";
     badge.addEventListener("click", () => {
@@ -420,7 +417,6 @@ function updateMoleculeDetails(mol) {
     });
   });
 
-  // Update stereo badges
   const stereoBadgesEl = document.getElementById("detailStereoBadges");
   if (stereoBadgesEl) {
     const name = mol.original_name;
@@ -438,7 +434,6 @@ function updateMoleculeDetails(mol) {
     stereoBadgesEl.innerHTML = badges;
   }
 
-  // Update download links
   if (mol.has_sdf) {
     btnDownloadSdf.style.display = "flex";
     btnDownloadSdf.href = `structures/sdf/${mol.id}.sdf`;
@@ -462,7 +457,6 @@ function updateMoleculeDetails(mol) {
 }
 
 function initializeViewerForMolecule(mol) {
-  // Update 2D options visibility
   const selectViewMode = document.getElementById("selectViewMode");
   const optFischer = document.getElementById("optFischer");
   const optNewman = document.getElementById("optNewman");
@@ -507,7 +501,6 @@ function selectMolecule(index) {
 }
 
 function updateActiveNavCard() {
-  // PR #4 optimization: use direct reference instead of DOM traversal
   if (activeNavCard) {
     activeNavCard.classList.remove("active-nav");
     activeNavCard = null;
@@ -523,7 +516,17 @@ function updateActiveNavCard() {
   }
 }
 
-// ── 3D VIEWER ────────────────────────────────────────────────────
+function closeSidebar() {
+  detailSidebar.classList.remove("open");
+  sidebarOverlay.classList.remove("open");
+  activeNavIndex = -1;
+  updateActiveNavCard();
+}
+
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - 3D/2D Viewer Logic
+   ──────────────────────────────────────────────────────────────── */
+
 function applyViewerStyle() {
   if (!glViewer) return;
 
@@ -543,7 +546,6 @@ function applyViewerStyle() {
 
   glViewer.setStyle({}, baseStyle);
 
-  // Highlight halogens
   const elements = [
     { elem: "Br", color: "orange" },
     { elem: "Cl", color: "green" },
@@ -669,28 +671,10 @@ function showFallbackImage(mol) {
   }
 }
 
-// ── COPY & CLIPBOARD ─────────────────────────────────────────────
-async function copyToClipboard(text, msg) {
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast(msg || `Copied to clipboard: "${text}"`);
-  } catch (err) {
-    console.error("Clipboard copy failed:", err);
-    showToast("Failed to copy! Please select and copy manually.");
-  }
-}
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Snapshots & Downloads
+   ──────────────────────────────────────────────────────────────── */
 
-function showToast(message) {
-  toastText.textContent = message;
-  toast.classList.add("show");
-
-  if (window.toastTimeout) clearTimeout(window.toastTimeout);
-  window.toastTimeout = setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2200);
-}
-
-// ── DOWNLOAD & SNAPSHOT ──────────────────────────────────────────
 function downloadSnapshot(viewerInstance, compoundName) {
   if (!viewerInstance) return;
   try {
@@ -822,7 +806,10 @@ function downloadCanvasAsPng(canvas, name) {
   showToast("Snapshot downloaded!");
 }
 
-// ── STARS / BOOKMARKS ────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Quiz & Bookmarks
+   ──────────────────────────────────────────────────────────────── */
+
 function toggleStar(molId, btn) {
   if (starredIds.has(molId)) {
     starredIds.delete(molId);
@@ -839,7 +826,6 @@ function toggleStar(molId, btn) {
   }
 }
 
-// ── QUIZ MODE ────────────────────────────────────────────────────
 function toggleQuiz() {
   quizMode = !quizMode;
   document.body.classList.toggle("quiz-mode", quizMode);
@@ -876,7 +862,6 @@ function resetQuizScore() {
   updateQuizScore();
 }
 
-// ── FUNCTIONAL GROUP HIGHLIGHT ──────────────────────────────────
 function highlightFunctionalGroup(category, badgeEl) {
   if (activeFgBadge === badgeEl) {
     badgeEl.classList.remove("active-highlight");
@@ -912,7 +897,30 @@ function highlightFunctionalGroup(category, badgeEl) {
   glViewer.render();
 }
 
-// ── CONFETTI ────────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Utilities & Animations
+   ──────────────────────────────────────────────────────────────── */
+
+async function copyToClipboard(text, msg) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(msg || `Copied to clipboard: "${text}"`);
+  } catch (err) {
+    console.error("Clipboard copy failed:", err);
+    showToast("Failed to copy! Please select and copy manually.");
+  }
+}
+
+function showToast(message) {
+  toastText.textContent = message;
+  toast.classList.add("show");
+
+  if (window.toastTimeout) clearTimeout(window.toastTimeout);
+  window.toastTimeout = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2200);
+}
+
 function launchConfetti() {
   const canvas = document.getElementById("confetti-canvas");
   if (!canvas) return;
@@ -959,17 +967,11 @@ function launchConfetti() {
   draw();
 }
 
-// ── HELPER: Close Sidebar ────────────────────────────────────────
-function closeSidebar() {
-  detailSidebar.classList.remove("open");
-  sidebarOverlay.classList.remove("open");
-  activeNavIndex = -1;
-  updateActiveNavCard();
-}
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Event Listeners
+   ──────────────────────────────────────────────────────────────── */
 
-// ── EVENT LISTENERS ──────────────────────────────────────────────
 function setupSearchListeners() {
-  // Search input
   searchInput.addEventListener("input", e => {
     searchQuery = e.target.value;
     clearBtn.style.display = searchQuery ? "block" : "none";
@@ -977,7 +979,6 @@ function setupSearchListeners() {
     renderMolecules();
   });
 
-  // Clear button
   clearBtn.addEventListener("click", () => {
     searchInput.value = "";
     searchQuery = "";
@@ -989,7 +990,6 @@ function setupSearchListeners() {
 }
 
 function setupThemeListeners() {
-  // Theme toggle
   themeToggleBtn.addEventListener("click", () => {
     const isDark = document.documentElement.classList.toggle("dark-theme");
     safeStorage.setItem("theme", isDark ? "dark" : "light");
@@ -1001,11 +1001,9 @@ function setupThemeListeners() {
 }
 
 function setupSidebarListeners() {
-  // Sidebar close
   btnSidebarClose.addEventListener("click", closeSidebar);
   sidebarOverlay.addEventListener("click", closeSidebar);
 
-  // Copy name in sidebar
   btnCopyName.addEventListener("click", () => {
     if (selectedMoleculeIndex >= 0) {
       const mol = currentFilteredList[selectedMoleculeIndex];
@@ -1013,7 +1011,6 @@ function setupSidebarListeners() {
     }
   });
 
-  // SMILES help toggle
   if (smilesHelpToggle && smilesHelpBanner) {
     smilesHelpToggle.addEventListener("click", () => {
       const isOpen = smilesHelpBanner.classList.toggle("open");
@@ -1023,10 +1020,8 @@ function setupSidebarListeners() {
 }
 
 function setupViewerListeners() {
-  // View mode change
   document.getElementById("selectViewMode").addEventListener("change", updateMoleculeRepresentation);
 
-  // 3D controls
   btnSpin.addEventListener("click", () => {
     if (glViewer) {
       isSpinning = !isSpinning;
@@ -1046,7 +1041,6 @@ function setupViewerListeners() {
     applyViewerStyle();
   });
 
-  // 3D Capture
   const btnCapture = document.getElementById("btnCapture");
   if (btnCapture) {
     btnCapture.addEventListener("click", () => {
@@ -1057,7 +1051,6 @@ function setupViewerListeners() {
     });
   }
 
-  // 2D Capture
   const btn2dCapture = document.getElementById("btn2dCapture");
   if (btn2dCapture) {
     btn2dCapture.addEventListener("click", download2dSnapshot);
@@ -1065,7 +1058,6 @@ function setupViewerListeners() {
 }
 
 function setupFilterListeners() {
-  // Starred filter
   const btnStarredFilter = document.getElementById("btnStarredFilter");
   if (btnStarredFilter) {
     btnStarredFilter.addEventListener("click", () => {
@@ -1074,7 +1066,6 @@ function setupFilterListeners() {
     });
   }
 
-  // Filter buttons
   filtersContainer.addEventListener("click", e => {
     const btn = e.target.closest(".filter-btn");
     if (!btn) return;
@@ -1088,20 +1079,17 @@ function setupFilterListeners() {
 }
 
 function setupQuizListeners() {
-  // Quiz mode button
   const btnQuizMode = document.getElementById("btnQuizMode");
   if (btnQuizMode) {
     btnQuizMode.addEventListener("click", toggleQuiz);
   }
 
-  // Quiz button (fixed)
   document.addEventListener("click", e => {
     if (e.target.id === "btnQuit Quiz") {
       toggleQuiz();
     }
   });
 
-  // Reset quiz button
   document.addEventListener("click", e => {
     if (e.target.textContent === "Reset") {
       resetQuizScore();
@@ -1110,7 +1098,6 @@ function setupQuizListeners() {
 }
 
 function setupKeyboardListeners() {
-  // Global keyboard shortcuts
   window.addEventListener("keydown", e => {
     if (e.key === "/" && document.activeElement !== searchInput) {
       e.preventDefault();
@@ -1165,5 +1152,30 @@ function setupEventListeners() {
   setupKeyboardListeners();
 }
 
-// ── START APPLICATION ────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
+   IUPAC Vocabulary Companion - Initialization
+   ──────────────────────────────────────────────────────────────── */
+
+async function init() {
+  try {
+    const response = await fetch("molecules.json");
+    molecules = await response.json();
+    molecules.forEach(m => {
+      m._lowerCategories = m.categories ? m.categories.map(c => c.toLowerCase()) : [];
+    });
+  } catch (err) {
+    console.error("Failed to load molecules.json:", err);
+    molecules = [];
+  }
+
+  setupTheme();
+  setupFilters();
+  updateStats();
+  renderMolecules();
+  setupEventListeners();
+  check3DmolAvailability();
+
+  console.log(`Loaded ${molecules.length} molecules. Application ready.`);
+}
+
 document.addEventListener("DOMContentLoaded", init);

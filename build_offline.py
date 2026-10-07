@@ -4,6 +4,7 @@ Build a fully self-contained offline version of the IUPAC Chemistry App.
 All CSS, JS, images, and data are embedded into a single HTML file.
 """
 
+from scripts.bundle_js import bundle_js
 import json
 import re
 import os
@@ -31,6 +32,8 @@ def create_offline_html():
     """Create a self-contained HTML file with all assets embedded"""
     
     print("🔨 Building offline version...")
+    print("  Bundling JS modules...")
+    bundle_js()
     print("  Reading source files...")
     
     # Read main files
