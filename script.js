@@ -218,31 +218,168 @@ function highlightText(text, query) {
   return text.replace(regex, '<span class="highlight">$1</span>');
 }
 
+function matchesMoleculeFilter(m, onlyStarred) {
+  if (onlyStarred && !starredIds.has(m.id)) return false;
+  if (selectedCategory !== "all") {
+    if (m._lowerCategories ? !m._lowerCategories.includes(selectedCategory) : !m.categories.map(c => c.toLowerCase()).includes(selectedCategory)) {
+      return false;
+    }
+  }
+
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    const matchesName = m.original_name.toLowerCase().includes(query);
+    const matchesFormula = m.formula && m.formula.toLowerCase().includes(query);
+    const matchesSmiles = m.smiles && m.smiles.toLowerCase().includes(query);
+    const matchesCategory = m._lowerCategories
+      ? m._lowerCategories.some(c => c.includes(query))
+      : m.categories.some(c => c.toLowerCase().includes(query));
+    return matchesName || matchesFormula || matchesSmiles || matchesCategory;
+  }
+
+  return true;
+}
+
+function createCategoryBadgesHTML(categories) {
+  return categories
+    .map(cat => {
+      const className = cat.toLowerCase().replace(/\s+/g, "-");
+      return `<span class="badge ${className}">${cat}</span>`;
+    })
+    .join("");
+}
+
+function createPropertyMetaHTML(formula, weight) {
+  if (!formula && !weight) return "";
+  let metaHTML = `<div class="property-meta">`;
+  if (formula) {
+    metaHTML += `
+      <div class="prop-item">
+        <span class="prop-label">Formula:</span>
+        <span class="prop-val">${highlightText(formula, searchQuery)}</span>
+      </div>
+    `;
+  }
+  if (weight) {
+    metaHTML += `
+      <div class="prop-item">
+        <span class="prop-label">MW:</span>
+        <span class="prop-val">${weight} g/mol</span>
+      </div>
+    `;
+  }
+  metaHTML += `</div>`;
+  return metaHTML;
+}
+
+function createCardThumbHTML(skeletalSvg) {
+  if (skeletalSvg) {
+    return `<div class="card-thumb">${skeletalSvg}</div>`;
+  }
+  return `<div class="card-thumb no-svg"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" opacity="0.4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375M15.75 12H4.5M15.75 12l-3-3m3 3l3-3M3.375 6.75h16.5A1.125 1.125 0 0121 7.875v10.5a1.125 1.125 0 01-1.125 1.125H3.375a1.125 1.125 0 01-1.125-1.125V7.875a1.125 1.125 0 011.125-1.125z"></path></svg></div>`;
+}
+
+function createMoleculeCardHTML(mol, idx, isStarred) {
+  const badgesHTML = createCategoryBadgesHTML(mol.categories);
+  const metaHTML = createPropertyMetaHTML(mol.formula, mol.weight);
+  const thumbHTML = createCardThumbHTML(mol.skeletal_svg);
+
+  return `
+    <div class="card-left">
+      ${thumbHTML}
+      <div style="flex:1;min-width:0;">
+        <div class="card-id-name">
+          <span class="mol-id">#${String(mol.id).padStart(3, "0")}</span>
+          <div class="mol-name">${highlightText(mol.original_name, searchQuery)}</div>
+          <span class="quiz-reveal-hint">click to reveal</span>
+        </div>
+        <div class="quiz-answer-btns" id="quizBtns-${idx}" data-molecule-index="${idx}">
+          <button class="quiz-btn-got" data-action="got">✓ Got it</button>
+          <button class="quiz-btn-miss" data-action="miss">✗ Review</button>
+        </div>
+        <div class="badges-row">${badgesHTML}</div>
+        ${metaHTML}
+      </div>
+    </div>
+    <div class="card-right">
+      <button class="copy-btn" data-copy-btn="${idx}" title="Copy IUPAC name">
+        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.141 0c-.892.029-1.776.147-2.654.291A6.332 6.332 0 0012 18a6.332 6.332 0 006.585-7.292m-10.725 0A6.332 6.332 0 0112 5.25">
+          </path>
+        </svg>
+        <span>Copy</span>
+      </button>
+      <button class="btn-star ${isStarred ? "starred" : ""}" data-star-btn="${idx}" title="Bookmark this molecule">
+        ${isStarred ? "★" : "☆"}
+      </button>
+    </div>
+  `;
+}
+
+function createMoleculeCard(mol, idx) {
+  const card = document.createElement("div");
+  card.className = "molecule-card";
+  card.setAttribute("id", `mol-card-${idx}`);
+  card.setAttribute("data-index", idx);
+
+  const isStarred = starredIds.has(mol.id);
+  card.innerHTML = createMoleculeCardHTML(mol, idx, isStarred);
+
+  // Event: Copy button
+  const copyBtn = card.querySelector(`[data-copy-btn="${idx}"]`);
+  copyBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    copyToClipboard(mol.original_name, "IUPAC Name Copied!");
+    card.classList.add("copied");
+    copyBtn.classList.add("success-btn");
+    launchConfetti();
+    setTimeout(() => {
+      card.classList.remove("copied");
+      copyBtn.classList.remove("success-btn");
+    }, 1200);
+  });
+
+  // Event: Star button
+  const starBtn = card.querySelector(`[data-star-btn="${idx}"]`);
+  starBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    toggleStar(mol.id, starBtn);
+  });
+
+  // Event: Quiz answer buttons
+  const quizBtns = card.querySelector(`[id="quizBtns-${idx}"]`);
+  if (quizBtns) {
+    quizBtns.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        const action = btn.getAttribute("data-action");
+        quizAnswer(action === "got", card);
+      });
+    });
+  }
+
+  // Event: Click name to reveal (quiz mode)
+  const molNameEl = card.querySelector(".mol-name");
+  if (molNameEl) {
+    molNameEl.addEventListener("click", e => {
+      if (document.body.classList.contains("quiz-mode")) {
+        e.stopPropagation();
+        card.classList.toggle("quiz-revealed");
+      }
+    });
+  }
+
+  // Event: Card click to select molecule
+  card.addEventListener("click", () => selectMolecule(idx));
+
+  return card;
+}
+
 function renderMolecules() {
   moleculesList.innerHTML = "";
 
   const onlyStarred = document.getElementById("btnStarredFilter")?.classList.contains("active");
-  currentFilteredList = molecules.filter(m => {
-    if (onlyStarred && !starredIds.has(m.id)) return false;
-    if (selectedCategory !== "all") {
-      if (m._lowerCategories ? !m._lowerCategories.includes(selectedCategory) : !m.categories.map(c => c.toLowerCase()).includes(selectedCategory)) {
-        return false;
-      }
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesName = m.original_name.toLowerCase().includes(query);
-      const matchesFormula = m.formula && m.formula.toLowerCase().includes(query);
-      const matchesSmiles = m.smiles && m.smiles.toLowerCase().includes(query);
-      const matchesCategory = m._lowerCategories
-        ? m._lowerCategories.some(c => c.includes(query))
-        : m.categories.some(c => c.toLowerCase().includes(query));
-      return matchesName || matchesFormula || matchesSmiles || matchesCategory;
-    }
-
-    return true;
-  });
+  currentFilteredList = molecules.filter(m => matchesMoleculeFilter(m, onlyStarred));
 
   activeNavIndex = -1;
   activeNavCard = null;
@@ -255,150 +392,7 @@ function renderMolecules() {
   emptyState.style.display = "none";
 
   currentFilteredList.forEach((mol, idx) => {
-    const card = document.createElement("div");
-    card.className = "molecule-card";
-    card.setAttribute("id", `mol-card-${idx}`);
-    card.setAttribute("data-index", idx);
-
-    const badgesHTML = mol.categories
-      .map(cat => {
-        const className = cat.toLowerCase().replace(/\s+/g, "-");
-        return `<span class="badge ${className}">${cat}</span>`;
-      })
-      .join("");
-
-    let metaHTML = "";
-    if (mol.formula || mol.weight) {
-      metaHTML = `<div class="property-meta">`;
-      if (mol.formula) {
-        metaHTML += `
-          <div class="prop-item">
-            <span class="prop-label">Formula:</span>
-            <span class="prop-val">${highlightText(mol.formula, searchQuery)}</span>
-          </div>
-        `;
-      }
-      if (mol.weight) {
-        metaHTML += `
-          <div class="prop-item">
-            <span class="prop-label">MW:</span>
-            <span class="prop-val">${mol.weight} g/mol</span>
-          </div>
-        `;
-      }
-      metaHTML += `</div>`;
-    }
-
-    let previewHTML = "";
-    if (mol.has_pymol) {
-      previewHTML = `
-        <div class="molecule-preview-wrapper" title="PyMOL 3D Render">
-          <img src="structures/images/${mol.id}.png" alt="${mol.original_name}" loading="lazy">
-        </div>
-      `;
-    } else if (mol.cid) {
-      previewHTML = `
-        <div class="molecule-preview-wrapper" title="PubChem 2D Preview">
-          <img src="https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${mol.cid}/PNG" alt="${mol.original_name}" loading="lazy">
-        </div>
-      `;
-    } else {
-      previewHTML = `
-        <div class="molecule-preview-wrapper" style="background: rgba(0,0,0,0.015)">
-          <svg class="structure-fallback" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375M15.75 12H4.5M15.75 12l-3-3m3 3l3-3M3.375 6.75h16.5A1.125 1.125 0 0121 7.875v10.5a1.125 1.125 0 01-1.125 1.125H3.375a1.125 1.125 0 01-1.125-1.125V7.875a1.125 1.125 0 011.125-1.125z">
-            </path>
-          </svg>
-        </div>
-      `;
-    }
-
-    let thumbHTML = "";
-    if (mol.skeletal_svg) {
-      thumbHTML = `<div class="card-thumb">${mol.skeletal_svg}</div>`;
-    } else {
-      thumbHTML = `<div class="card-thumb no-svg"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" opacity="0.4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375M15.75 12H4.5M15.75 12l-3-3m3 3l3-3M3.375 6.75h16.5A1.125 1.125 0 0121 7.875v10.5a1.125 1.125 0 01-1.125 1.125H3.375a1.125 1.125 0 01-1.125-1.125V7.875a1.125 1.125 0 011.125-1.125z"></path></svg></div>`;
-    }
-
-    const isStarred = starredIds.has(mol.id);
-    card.innerHTML = `
-      <div class="card-left">
-        ${thumbHTML}
-        <div style="flex:1;min-width:0;">
-          <div class="card-id-name">
-            <span class="mol-id">#${String(mol.id).padStart(3, "0")}</span>
-            <div class="mol-name">${highlightText(mol.original_name, searchQuery)}</div>
-            <span class="quiz-reveal-hint">click to reveal</span>
-          </div>
-          <div class="quiz-answer-btns" id="quizBtns-${idx}" data-molecule-index="${idx}">
-            <button class="quiz-btn-got" data-action="got">✓ Got it</button>
-            <button class="quiz-btn-miss" data-action="miss">✗ Review</button>
-          </div>
-          <div class="badges-row">${badgesHTML}</div>
-          ${metaHTML}
-        </div>
-      </div>
-      <div class="card-right">
-        <button class="copy-btn" data-copy-btn="${idx}" title="Copy IUPAC name">
-          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.141 0c-.892.029-1.776.147-2.654.291A6.332 6.332 0 0012 18a6.332 6.332 0 006.585-7.292m-10.725 0A6.332 6.332 0 0112 5.25">
-            </path>
-          </svg>
-          <span>Copy</span>
-        </button>
-        <button class="btn-star ${isStarred ? "starred" : ""}" data-star-btn="${idx}" title="Bookmark this molecule">
-          ${isStarred ? "★" : "☆"}
-        </button>
-      </div>
-    `;
-
-    // Event: Copy button
-    const copyBtn = card.querySelector(`[data-copy-btn="${idx}"]`);
-    copyBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      copyToClipboard(mol.original_name, "IUPAC Name Copied!");
-      card.classList.add("copied");
-      copyBtn.classList.add("success-btn");
-      launchConfetti();
-      setTimeout(() => {
-        card.classList.remove("copied");
-        copyBtn.classList.remove("success-btn");
-      }, 1200);
-    });
-
-    // Event: Star button
-    const starBtn = card.querySelector(`[data-star-btn="${idx}"]`);
-    starBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      toggleStar(mol.id, starBtn);
-    });
-
-    // Event: Quiz answer buttons
-    const quizBtns = card.querySelector(`[id="quizBtns-${idx}"]`);
-    if (quizBtns) {
-      quizBtns.querySelectorAll("button").forEach(btn => {
-        btn.addEventListener("click", e => {
-          e.stopPropagation();
-          const action = btn.getAttribute("data-action");
-          quizAnswer(action === "got", card);
-        });
-      });
-    }
-
-    // Event: Click name to reveal (quiz mode)
-    const molNameEl = card.querySelector(".mol-name");
-    if (molNameEl) {
-      molNameEl.addEventListener("click", e => {
-        if (document.body.classList.contains("quiz-mode")) {
-          e.stopPropagation();
-          card.classList.toggle("quiz-revealed");
-        }
-      });
-    }
-
-    // Event: Card click to select molecule
-    card.addEventListener("click", () => selectMolecule(idx));
-
+    const card = createMoleculeCard(mol, idx);
     moleculesList.appendChild(card);
   });
 }
