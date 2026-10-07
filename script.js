@@ -113,11 +113,18 @@ const btnDownloadSdf = document.getElementById("btnDownloadSdf");
 const btnPubchem = document.getElementById("btnPubchem");
 
 // ── INITIALIZATION ───────────────────────────────────────────────
+function preprocessMolecules() {
+  molecules.forEach(m => {
+    m.lowerCategories = (m.categories || []).map(c => c.toLowerCase());
+  });
+}
+
 async function init() {
   // Load data from JSON file
   try {
     const response = await fetch("molecules.json");
     molecules = await response.json();
+    preprocessMolecules();
   } catch (err) {
     console.error("Failed to load molecules.json:", err);
     molecules = [];
@@ -162,7 +169,7 @@ function check3DmolAvailability() {
 function setupFilters() {
   CATEGORIES.forEach(cat => {
     const count = molecules.filter(m =>
-      m.categories.map(c => c.toLowerCase()).includes(cat)
+      (m.lowerCategories || []).includes(cat)
     ).length;
     if (count > 0) {
       const btn = document.createElement("button");
@@ -212,7 +219,7 @@ function renderMolecules() {
   currentFilteredList = molecules.filter(m => {
     if (onlyStarred && !starredIds.has(m.id)) return false;
     if (selectedCategory !== "all") {
-      if (!m.categories.map(c => c.toLowerCase()).includes(selectedCategory)) {
+      if (!(m.lowerCategories || []).includes(selectedCategory)) {
         return false;
       }
     }
@@ -222,8 +229,8 @@ function renderMolecules() {
       const matchesName = m.original_name.toLowerCase().includes(query);
       const matchesFormula = m.formula && m.formula.toLowerCase().includes(query);
       const matchesSmiles = m.smiles && m.smiles.toLowerCase().includes(query);
-      const matchesCategory = m.categories.some(c =>
-        c.toLowerCase().includes(query)
+      const matchesCategory = (m.lowerCategories || []).some(c =>
+        c.includes(query)
       );
       return matchesName || matchesFormula || matchesSmiles || matchesCategory;
     }
