@@ -498,7 +498,7 @@ function selectMolecule(index) {
 }
 
 function updateActiveNavCard() {
-  document.querySelectorAll(".molecule-card").forEach(c =>
+  document.querySelectorAll(".active-nav").forEach(c =>
     c.classList.remove("active-nav")
   );
 
@@ -952,7 +952,7 @@ function closeSidebar() {
   detailSidebar.classList.remove("open");
   sidebarOverlay.classList.remove("open");
   activeNavIndex = -1;
-  document.querySelectorAll(".molecule-card").forEach(c =>
+  document.querySelectorAll(".active-nav").forEach(c =>
     c.classList.remove("active-nav")
   );
 }
